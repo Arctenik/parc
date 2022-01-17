@@ -409,6 +409,7 @@
 						result = `matchChars(${charsToRegExp(expr)}${offsetArg})`;
 					} else if (expr.type === "dot") {
 						result = `matchAny(${offsetArgFirst})`;
+						save = true;
 					} else {
 						throw "wtf";
 					}
