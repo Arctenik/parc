@@ -32,7 +32,7 @@
 				result.offsets = items.shift().value;
 			}
 			
-			if (items[items.length - 1].type === "arrow") {
+			if (items[items.length - 1]?.type === "arrow") {
 				result.arrow = items.pop().value[0]?.value || true;
 			}
 			
