@@ -1,0 +1,183 @@
+
+
+parser {
+	> ruleset ;equals ruleset
+}
+
+ruleset {
+	rule+
+}
+
+rule {
+	name > ruleprops group
+}
+
+ruleprops {
+	> star? arrow?
+}
+
+group {
+	"{" > groupcontent "}"
+	"(" > groupcontent ")"
+}
+
+groupcontent => {
+	uncondbranch > "lb"?
+	branch > groupcontenttail?
+}
+
+groupcontenttail => {
+	"/" > groupcontent
+	;lb > groupcontent?
+}
+
+branch {
+	offsets > expression? cond? arrow?
+	expression > cond? arrow?
+}
+
+offsets {
+	offset+
+}
+
+uncondbranch => branch {
+	cond > arrow?
+	arrow
+}
+
+cond {
+	">" > expression*
+}
+
+arrow {
+	"=>" > name?
+}
+
+expression {
+	offset
+	unmoddedexpr > exprmod?
+}
+
+offset {
+	number > offsettype literal
+	offsettype > literal
+}
+
+unmoddedexpr => {
+	colon > nongroupbase
+	baseexpr
+}
+
+baseexpr => {
+	nongroupbase / group
+}
+
+nongroupbase => {
+	literal / name
+}
+
+literal => {
+	dot / string / chars
+}
+
+exprmod => {
+	star / plus / question
+}
+
+
+
+=====================
+
+
+
+tokens* {
+	> anyws? (grouportoken > anyws?)*
+}
+
+grouportoken* {
+	grouptokens / token
+}
+
+grouptokens* {
+	openbracket > anyws? groupcontent closebracket
+}
+
+groupcontent* {
+	> (grouportoken > ws?)*
+}
+
+ws* {
+	;linews+ > (lb > anyws?)?
+	lb > anyws?
+}
+
+lb {
+	"\n"
+}
+
+linews {
+	([ \t\r] / comment)+
+}
+
+comment {
+	"//" > [^\n]*
+	"/*" > (!"*/" .)* "*/"
+}
+
+anyws* {
+	([ \t\r\n] / ;comment)+
+}
+
+openbracket => {
+	[{(]
+}
+
+closebracket => {
+	[})]
+}
+
+token => {
+	specialsyntax / string / chars / number / name
+}
+
+specialsyntax => {
+	"=>"
+	"="+ => equals
+	"*" => star
+	"+" => plus
+	"?" => question
+	"." => dot
+	[&!] => offsettype
+	[:;] => colon
+	[/>]
+}
+
+name {
+	[a-zA-Z_] > nametail?
+}
+
+nametail {
+	[a-zA-Z0-9_]+
+}
+
+number {
+	"-" > [0-9]+
+	[0-9]+
+}
+
+string {
+	"\"" > stritem* "\""
+}
+
+stritem {
+	"\\" > . / [^"]
+}
+
+chars {
+	"[" > charsitem* "]"
+}
+
+charsitem {
+	"\\" > . / [^\]]
+}
+

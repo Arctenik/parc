@@ -1,0 +1,166 @@
+
+
+parser {
+	> ruleset equals ruleset
+}
+
+ruleset {
+	rule+
+}
+
+rule {
+	name > ruleprops group
+}
+
+ruleprops {
+	> star? rulearrow?
+}
+
+rulearrow {
+	arrow > name?
+}
+
+group {
+	"{" > groupcontent "}"
+	"(" > groupcontent ")"
+}
+
+groupcontent => {
+	uncondbranch > "lb"?
+	branch > groupcontenttail?
+}
+
+groupcontenttail => {
+	"/" > groupcontent
+	"lb" > groupcontent?
+}
+
+branch {
+	nots > expression? cond?
+	expression > cond?
+}
+
+nots {
+	not+
+}
+
+uncondbranch => branch {
+	cond
+}
+
+cond {
+	">" > expression*
+}
+
+expression {
+	not
+	baseexpr > exprmod?
+}
+
+not {
+	"!" > baseexpr
+}
+
+baseexpr => {
+	dot / name / string / chars / group
+}
+
+exprmod => {
+	star / plus / question
+}
+
+
+
+=====================
+
+
+
+tokens* {
+	> [ \t\r\n]* (grouportoken > [ \t\r\n]*)*
+}
+
+grouportoken* {
+	grouptokens / token
+}
+
+grouptokens* {
+	openbracket > [ \t\r\n]* groupcontent closebracket
+}
+
+groupcontent* {
+	> (grouportoken > groupws?)*
+}
+
+groupws* {
+	[ \t\r]+ > (lb > [ \t\r\n]*)?
+	lb > [ \t\r\n]*
+}
+
+lb {
+	"\n"
+}
+
+openbracket => {
+	[{(]
+}
+
+closebracket => {
+	[})]
+}
+
+token => {
+	specialsyntax / string / chars / name
+}
+
+specialsyntax => {
+	arrow / equals / star / plus / question / dot / [/>!]
+}
+
+arrow {
+	"=>"
+}
+
+equals {
+	"="+
+}
+
+star {
+	"*"
+}
+
+plus {
+	"+"
+}
+
+question {
+	"?"
+}
+
+dot {
+	"."
+}
+
+name {
+	[a-zA-Z_] > nametail?
+}
+
+nametail {
+	[a-zA-Z0-9_]+
+}
+
+string {
+	"\"" > stritem* "\""
+}
+
+stritem {
+	"\\" > . / [^"]
+}
+
+chars {
+	"[" > charsitem* "]"
+}
+
+charsitem {
+	"\\" > . / [^\]]
+}
+

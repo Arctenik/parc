@@ -1,0 +1,24 @@
+
+
+Name: <input type="text" id="parserNameInp" value="parse">
+<br><br>
+<textarea id="parserInp"></textarea>
+<br><br>
+<button id="convertButton">Compile</button>
+
+
+<script src="parc-js.js"></script>
+<script src="parc-parser.js"></script>
+
+<script>
+let parserNameInp = document.getElementById("parserNameInp"),
+	parserInp = document.getElementById("parserInp"),
+	convertButton = document.getElementById("convertButton");
+
+convertButton.addEventListener("click", () => {
+	console.log(parc.parse.tokenize(parserInp.value));
+	console.log(parc.parse(parserInp.value));
+	console.log(compiled = parc(parserInp.value, parserNameInp.value));
+});
+</script>
+

@@ -1,0 +1,76 @@
+
+(
+	(parser
+		(ruleset equals ruleset))
+	
+	(ruleset
+		((+ rule)))
+	
+	(rule
+		(> name ruleprops group))
+	
+	(ruleprops
+		((? star) (? arrow)))
+	
+	(group
+		(> "{" groupcontent "}")
+		(> "(" groupcontent ")"))
+	
+	((groupcontent =>)
+		((? (branch (* (> "/" branch))))))
+	
+	(branch
+		((+ expression) (? cond)))
+	
+	(cond
+		((">" (* expression))))
+	
+	(expression
+		((/ (dot) (name) (string) (chars) (group)) (? exprmod)))
+	
+	((exprmod =>)
+		(star) (plus) (question))
+)
+
+(
+	((tokens *)
+		((* (@ " \t\r\n")) (* (> token (* (@ " \t\r\n"))))))
+	
+	((token =>)
+		(specialsyntax) (string) (chars) (name))
+	
+	((specialsyntax =>)
+		(arrow) (equals) (star) (plus) (question) (dot) ((@ "{}()/>")))
+	
+	(arrow ("=>"))
+	
+	(equals ((+ "=")))
+	
+	(star ("*"))
+	
+	(plus ("+"))
+	
+	(question ("?"))
+	
+	(dot ("."))
+	
+	(name
+		((@ "a-zA-Z_") (? nametail)))
+	
+	(nametail
+		((+ (@ "a-zA-Z0-9_"))))
+	
+	(string
+		(> "\"" (* stritem) "\""))
+	
+	(stritem
+		(> "\\" .)
+		((@ "^\"")))
+	
+	(chars
+		(> "[" (* charsitem) "]"))
+	
+	(charsitem
+		(> "\\" .)
+		((@ "^]")))
+)
