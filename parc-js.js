@@ -312,7 +312,7 @@
 							`;
 						} else {
 							result = `
-								${compileExprs(branch.ext)}
+								${compileExprs(branch.ext || [])}
 								${arrowCode}
 							`;
 						}
