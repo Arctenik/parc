@@ -102,7 +102,7 @@
 		});
 	}
 
-	function compileParser(source, funcName = "parse") {
+	function compileParser(source, funcName) {
 		let [parserRules, tokenRules] = parse(source, transformers),
 			firstParserRule = parserRules.rules[parserRules.firstRule],
 			untypedParser = firstParserRule.arrow === true || firstParserRule.star;
