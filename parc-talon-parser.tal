@@ -1,0 +1,812 @@
+fun parc_parse_evaltransforms(expr) {
+	this val
+	if (expr[1][:0] == "") {
+		val = expr[1]
+	} else {
+		val = []
+		this item
+		for (item in expr[1]) {
+			append(val, parc_parse_evaltransforms(item))
+		}
+	}
+	ret parc_parse_transform(expr[0], val, expr[2])
+}
+
+fun parc_parse(text, usetransforms) {
+	this e = false;
+	this i = 0;
+	this tokens = parc_parse_pt_tokens();
+	if(e) {
+		ret[tokens, e]
+	} else if(i < len(text) || tokens == false) {
+		ret[tokens, parc_parse_error_t()]
+	};
+	i = 0;
+	this result = parc_parse_pe_parser();
+	if(e) {
+		ret[result, e]
+	} else if(i < len(tokens) || result == false) {
+		ret[result, parc_parse_error_t()]
+	};
+	if(usetransforms) {
+		result = parc_parse_evaltransforms(result[0])
+	} else {
+		result = result[0]
+	};
+	ret [result, e]
+};
+fun parc_parse_init(type) {
+	ret[type, [], i]
+};
+fun parc_parse_handle(data, save) {
+	if(e || data == false) {
+		ret false
+	} else {
+		if(save) {
+			this expr;
+			for(expr in data) {
+				append(result[1], expr)
+			}
+		};
+		ret true
+	}
+};
+fun parc_parse_encstring(string) {
+	string = str([string]);
+	ret string[1: -1]
+};
+fun parc_parse_formatloc(text, i) {
+	this loc = parc_parse_getloc(text, i);
+	ret "line " + str(loc[1] + 1) + " character " + str(loc[2] + 1)
+};
+fun parc_parse_getloc(text, i) {
+	this j = 0;
+	this k = 0;
+	this l = 0;
+	while(j < i && j < len(text)) {
+		if(text[j] == "\n") {
+			k += 1;
+			l = j + 1
+		};
+		j += 1
+	};
+	ret[i, k, i - l]
+};
+fun parc_parse_e_result() {
+	if(e) {
+		ret false
+	} else if(result[0] == false) {
+		ret result[1]
+	} else {
+		if(result[2] < len(tokens)) {
+			result[2] = tokens[result[2]][2]
+		} else {
+			result[2] = len(text)
+		};
+		ret[result]
+	}
+};
+fun parc_parse_match_eo(string, offset, inverse) {
+	this j = i + (offset || 0);
+	if(j < len(tokens) && tokens[j][0] == string) {
+		if(offset == "") {
+			i += 1
+		};
+		if(inverse) {
+			ret false
+		} else {
+			ret[tokens[j]]
+		}
+	} else {
+		if(inverse) {
+			ret true
+		} else {
+			ret false
+		}
+	}
+};
+fun parc_parse_matchany_eo(offset, inverse) {
+	this j = i + (offset || 0);
+	if(j < len(tokens)) {
+		if(offset == "") {
+			i += 1
+		};
+		if(inverse) {
+			ret false
+		} else {
+			ret[tokens[j]]
+		}
+	} else {
+		if(inverse) {
+			ret true
+		} else {
+			ret false
+		}
+	}
+};
+fun parc_parse_match_e(string) {
+	ret parc_parse_match_eo(string, "", false)
+};
+fun parc_parse_matchany_e() {
+	ret parc_parse_matchany_eo("", false)
+};
+fun parc_parse_error_e() {
+	if(i < len(tokens)) {
+		ret "Unexpected" + ((tokens[i][0] == tokens[i][1] && "") || " " + tokens[i][0]) + " token " + parc_parse_encstring(tokens[i][1]) + " at " + parc_parse_formatloc(text, tokens[i][2])
+	} else {
+		ret "Unexpected end of input"
+	}
+};
+fun parc_parse_t_result() {
+	if(e) {
+		ret false
+	} else if(result[0] == false) {
+		ret result[1]
+	} else {
+		result[1] = parc_parse_jointokens(result[1]);
+		ret[result]
+	}
+};
+fun parc_parse_jointokens(tokens) {
+	this result = "";
+	this token;
+	for(token in tokens) {
+		result += token[1]
+	};
+	ret result
+};
+fun parc_parse_match_to(string, offset, inverse) {
+	this j = i + (offset || 0);
+	if(j + len(string) <= len(text) && text[j: j + len(string)] == string) {
+		if(offset == "") {
+			i += len(string)
+		};
+		if(inverse) {
+			ret false
+		} else {
+			ret[[string, string, j]]
+		}
+	} else {
+		if(inverse) {
+			ret true
+		} else {
+			ret false
+		}
+	}
+};
+fun parc_parse_matchany_to(offset, inverse) {
+	this j = i + (offset || 0);
+	if(j < len(text)) {
+		if(offset == "") {
+			i += 1
+		};
+		if(inverse) {
+			ret false
+		} else {
+			ret[[text[j], text[j], j]]
+		}
+	} else {
+		if(inverse) {
+			ret true
+		} else {
+			ret false
+		}
+	}
+};
+fun parc_parse_matchchars_to(chars, charsinverse, offset, inverse) {
+	this j = i + (offset || 0);
+	this match = false;
+	if(j < len(text)) {
+		this n = ord(text[j]);
+		this range;
+		for(range in chars) {
+			if(len(range) == 1) {
+				if(ord(range) == n) {
+					match = true;
+					break
+				}
+			} else {
+				if(ord(range[0]) <= n && n <= ord(range[1])) {
+					match = true;
+					break
+				}
+			}
+		};
+		if(charsinverse) {
+			match = !match
+		}
+	};
+	if(match) {
+		if(offset == "") {
+			i += 1
+		};
+		if(inverse) {
+			ret false
+		} else {
+			ret[[text[j], text[j], j]]
+		}
+	} else {
+		if(inverse) {
+			ret true
+		} else {
+			ret false
+		}
+	}
+};
+fun parc_parse_match_t(string) {
+	ret parc_parse_match_to(string, "", false)
+};
+fun parc_parse_matchany_t() {
+	ret parc_parse_matchany_to("", false)
+};
+fun parc_parse_matchchars_t(chars, inverse) {
+	ret parc_parse_matchchars_to(chars, inverse, "", false)
+};
+fun parc_parse_error_t() {
+	if(i < len(text)) {
+		ret "Invalid syntax at " + parc_parse_formatloc(text, i)
+	} else {
+		ret "Unexpected end of input"
+	}
+};
+fun parc_parse_pe_parser() {
+	this result = parc_parse_init('parser');
+	if(!e && !(parc_parse_handle(parc_parse_pe_ruleset(), true))) {
+		e = parc_parse_error_e()
+	};
+	if(!e && !(parc_parse_handle(parc_parse_match_e('equals'), false))) {
+		e = parc_parse_error_e()
+	};
+	if(!e && !(parc_parse_handle(parc_parse_pe_ruleset(), true))) {
+		e = parc_parse_error_e()
+	};
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_ruleset() {
+	this result = parc_parse_init('ruleset');
+	if(parc_parse_handle(parc_parse_pe_rule(), true)) {
+		while(parc_parse_handle(parc_parse_pe_rule(), true)) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_rule() {
+	this result = parc_parse_init('rule');
+	if(parc_parse_handle(parc_parse_match_e('name'), true)) {
+		if(!e && !(parc_parse_handle(parc_parse_pe_ruleprops(), true))) {
+			e = parc_parse_error_e()
+		};
+		if(!e && !(parc_parse_handle(parc_parse_pe_group(), true))) {
+			e = parc_parse_error_e()
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_ruleprops() {
+	this result = parc_parse_init('ruleprops');
+	if(!e) {
+		parc_parse_handle(parc_parse_match_e('star'), true)
+	};
+	if(!e) {
+		parc_parse_handle(parc_parse_pe_arrow(), true)
+	};
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_group() {
+	this result = parc_parse_init('group');
+	if(parc_parse_handle(parc_parse_match_e('{'), false)) {
+		if(!e && !(parc_parse_handle(parc_parse_pe_groupcontent(), true))) {
+			e = parc_parse_error_e()
+		};
+		if(!e && !(parc_parse_handle(parc_parse_match_e('}'), false))) {
+			e = parc_parse_error_e()
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_match_e('('), false)) {
+			if(!e && !(parc_parse_handle(parc_parse_pe_groupcontent(), true))) {
+				e = parc_parse_error_e()
+			};
+			if(!e && !(parc_parse_handle(parc_parse_match_e(')'), false))) {
+				e = parc_parse_error_e()
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_groupcontent() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_pe_uncondbranch(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_match_e('lb'), false)
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_pe_branch(), true)) {
+			if(!e) {
+				parc_parse_handle(parc_parse_pe_groupcontenttail(), true)
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_groupcontenttail() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_match_e('/'), false)) {
+		if(!e && !(parc_parse_handle(parc_parse_pe_groupcontent(), true))) {
+			e = parc_parse_error_e()
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_match_e('lb'), false)) {
+			if(!e) {
+				parc_parse_handle(parc_parse_pe_groupcontent(), true)
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_branch() {
+	this result = parc_parse_init('branch');
+	if(parc_parse_handle(parc_parse_pe_offsets(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pe_expression(), true)
+		};
+		if(!e) {
+			parc_parse_handle(parc_parse_pe_cond(), true)
+		};
+		if(!e) {
+			parc_parse_handle(parc_parse_pe_arrow(), true)
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_pe_expression(), true)) {
+			if(!e) {
+				parc_parse_handle(parc_parse_pe_cond(), true)
+			};
+			if(!e) {
+				parc_parse_handle(parc_parse_pe_arrow(), true)
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_offsets() {
+	this result = parc_parse_init('offsets');
+	if(parc_parse_handle(parc_parse_pe_offset(), true)) {
+		while(parc_parse_handle(parc_parse_pe_offset(), true)) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_uncondbranch() {
+	this result = parc_parse_init('branch');
+	if(parc_parse_handle(parc_parse_pe_cond(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pe_arrow(), true)
+		};
+	} else if(!e) {
+		if(!(parc_parse_handle(parc_parse_pe_arrow(), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_cond() {
+	this result = parc_parse_init('cond');
+	if(parc_parse_handle(parc_parse_match_e('>'), false)) {
+		while(!e && (parc_parse_handle(parc_parse_pe_expression(), true))) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_arrow() {
+	this result = parc_parse_init('arrow');
+	if(parc_parse_handle(parc_parse_match_e('=>'), false)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_match_e('name'), true)
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_expression() {
+	this result = parc_parse_init('expression');
+	if(!(parc_parse_handle(parc_parse_pe_offset(), true)) && !e) {
+		if(parc_parse_handle(parc_parse_pe_unmoddedexpr(), true)) {
+			if(!e) {
+				parc_parse_handle(parc_parse_pe_exprmod(), true)
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_offset() {
+	this result = parc_parse_init('offset');
+	if(parc_parse_handle(parc_parse_match_e('number'), true)) {
+		if(!e && !(parc_parse_handle(parc_parse_match_e('offsettype'), true))) {
+			e = parc_parse_error_e()
+		};
+		if(!e && !(parc_parse_handle(parc_parse_pe_literal(), true))) {
+			e = parc_parse_error_e()
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_match_e('offsettype'), true)) {
+			if(!e && !(parc_parse_handle(parc_parse_pe_literal(), true))) {
+				e = parc_parse_error_e()
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_unmoddedexpr() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_match_e('colon'), true)) {
+		if(!e && !(parc_parse_handle(parc_parse_pe_nongroupbase(), true))) {
+			e = parc_parse_error_e()
+		};
+	} else if(!e) {
+		if(!(parc_parse_handle(parc_parse_pe_baseexpr(), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_baseexpr() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_pe_nongroupbase(), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_pe_group(), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_nongroupbase() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_pe_literal(), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_match_e('name'), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_literal() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_match_e('dot'), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_match_e('string'), true)) && !e) {
+			if(!(parc_parse_handle(parc_parse_match_e('chars'), true)) && !e) {
+				ret false;
+			}
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pe_exprmod() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_match_e('star'), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_match_e('plus'), true)) && !e) {
+			if(!(parc_parse_handle(parc_parse_match_e('question'), true)) && !e) {
+				ret false;
+			}
+		}
+	}
+	ret parc_parse_e_result()
+};
+fun parc_parse_pt_tokens() {
+	this result = parc_parse_init(false);
+	if(!e) {
+		parc_parse_handle(parc_parse_pt_anyws(), true)
+	};
+	while(!e && (parc_parse_handle(parc_parse_pg_0(), false))) {};
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_grouportoken() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_pt_grouptokens(), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_pt_token(), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_grouptokens() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_pt_openbracket(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pt_anyws(), true)
+		};
+		if(!e && !(parc_parse_handle(parc_parse_pt_groupcontent(), true))) {
+			e = parc_parse_error_t()
+		};
+		if(!e && !(parc_parse_handle(parc_parse_pt_closebracket(), true))) {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_groupcontent() {
+	this result = parc_parse_init(false);
+	while(!e && (parc_parse_handle(parc_parse_pg_1(), false))) {};
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_ws() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_pt_linews(), false)) {
+		while(parc_parse_handle(parc_parse_pt_linews(), false)) {};
+		if(!e) {
+			parc_parse_handle(parc_parse_pg_2(), false)
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_pt_lb(), true)) {
+			if(!e) {
+				parc_parse_handle(parc_parse_pt_anyws(), true)
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_lb() {
+	this result = parc_parse_init('lb');
+	if(!(parc_parse_handle(parc_parse_match_t('\n'), true)) && !e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_linews() {
+	this result = parc_parse_init('linews');
+	if(parc_parse_handle(parc_parse_pg_3(), false)) {
+		while(parc_parse_handle(parc_parse_pg_3(), false)) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_comment() {
+	this result = parc_parse_init('comment');
+	if(parc_parse_handle(parc_parse_match_t('//'), true)) {
+		while(!e && (parc_parse_handle(parc_parse_matchchars_t(['\n'], true), true))) {};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_match_t('/*'), true)) {
+			while(!e && (parc_parse_handle(parc_parse_pg_4(), false))) {};
+			if(!e && !(parc_parse_handle(parc_parse_match_t('*/'), true))) {
+				e = parc_parse_error_t()
+			};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_anyws() {
+	this result = parc_parse_init(false);
+	if(parc_parse_handle(parc_parse_pg_5(), false)) {
+		while(parc_parse_handle(parc_parse_pg_5(), false)) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_openbracket() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_matchchars_t(['{', '('], false), true)) && !e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_closebracket() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_matchchars_t(['}', ')'], false), true)) && !e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_token() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_pt_specialsyntax(), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_pt_string(), true)) && !e) {
+			if(!(parc_parse_handle(parc_parse_pt_chars(), true)) && !e) {
+				if(!(parc_parse_handle(parc_parse_pt_number(), true)) && !e) {
+					if(!(parc_parse_handle(parc_parse_pt_name(), true)) && !e) {
+						ret false;
+					}
+				}
+			}
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_specialsyntax() {
+	this result = parc_parse_init(false);
+	if(!(parc_parse_handle(parc_parse_match_t('=>'), true)) && !e) {
+		if(parc_parse_handle(parc_parse_match_t('='), true)) {
+			while(parc_parse_handle(parc_parse_match_t('='), true)) {};
+			result[0] = 'equals';
+		} else if(!e) {
+			if(parc_parse_handle(parc_parse_match_t('*'), true)) {
+				result[0] = 'star';
+			} else if(!e) {
+				if(parc_parse_handle(parc_parse_match_t('+'), true)) {
+					result[0] = 'plus';
+				} else if(!e) {
+					if(parc_parse_handle(parc_parse_match_t('?'), true)) {
+						result[0] = 'question';
+					} else if(!e) {
+						if(parc_parse_handle(parc_parse_match_t('.'), true)) {
+							result[0] = 'dot';
+						} else if(!e) {
+							if(parc_parse_handle(parc_parse_matchchars_t(['&', '!'], false), true)) {
+								result[0] = 'offsettype';
+							} else if(!e) {
+								if(parc_parse_handle(parc_parse_matchchars_t([':', ';'], false), true)) {
+									result[0] = 'colon';
+								} else if(!e) {
+									if(!(parc_parse_handle(parc_parse_matchchars_t(['/', '>'], false), true)) && !e) {
+										ret false;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_name() {
+	this result = parc_parse_init('name');
+	if(parc_parse_handle(parc_parse_matchchars_t(['az', 'AZ', '_'], false), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pt_nametail(), true)
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_nametail() {
+	this result = parc_parse_init('nametail');
+	if(parc_parse_handle(parc_parse_matchchars_t(['az', 'AZ', '09', '_'], false), true)) {
+		while(parc_parse_handle(parc_parse_matchchars_t(['az', 'AZ', '09', '_'], false), true)) {};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_number() {
+	this result = parc_parse_init('number');
+	if(parc_parse_handle(parc_parse_match_t('-'), true)) {
+		if(!e && (parc_parse_handle(parc_parse_matchchars_t(['09'], false), true))) {
+			while(!e && (parc_parse_handle(parc_parse_matchchars_t(['09'], false), true))) {}
+		} else {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		if(parc_parse_handle(parc_parse_matchchars_t(['09'], false), true)) {
+			while(parc_parse_handle(parc_parse_matchchars_t(['09'], false), true)) {};
+		} else if(!e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_string() {
+	this result = parc_parse_init('string');
+	if(parc_parse_handle(parc_parse_match_t('"'), true)) {
+		while(!e && (parc_parse_handle(parc_parse_pt_stritem(), true))) {};
+		if(!e && !(parc_parse_handle(parc_parse_match_t('"'), true))) {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_stritem() {
+	this result = parc_parse_init('stritem');
+	if(parc_parse_handle(parc_parse_match_t('\\'), true)) {
+		if(!e && !(parc_parse_handle(parc_parse_matchany_t(), true))) {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		if(!(parc_parse_handle(parc_parse_matchchars_t(['"'], true), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_chars() {
+	this result = parc_parse_init('chars');
+	if(parc_parse_handle(parc_parse_match_t('['), true)) {
+		while(!e && (parc_parse_handle(parc_parse_pt_charsitem(), true))) {};
+		if(!e && !(parc_parse_handle(parc_parse_match_t(']'), true))) {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pt_charsitem() {
+	this result = parc_parse_init('charsitem');
+	if(parc_parse_handle(parc_parse_match_t('\\'), true)) {
+		if(!e && !(parc_parse_handle(parc_parse_matchany_t(), true))) {
+			e = parc_parse_error_t()
+		};
+	} else if(!e) {
+		if(!(parc_parse_handle(parc_parse_matchchars_t([']'], true), true)) && !e) {
+			ret false;
+		}
+	}
+	ret parc_parse_t_result()
+};
+fun parc_parse_pg_0() {
+	if(parc_parse_handle(parc_parse_pt_grouportoken(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pt_anyws(), true)
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret!e
+};
+fun parc_parse_pg_1() {
+	if(parc_parse_handle(parc_parse_pt_grouportoken(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pt_ws(), true)
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret!e
+};
+fun parc_parse_pg_2() {
+	if(parc_parse_handle(parc_parse_pt_lb(), true)) {
+		if(!e) {
+			parc_parse_handle(parc_parse_pt_anyws(), true)
+		};
+	} else if(!e) {
+		ret false;
+	}
+	ret!e
+};
+fun parc_parse_pg_3() {
+	if(!(parc_parse_handle(parc_parse_matchchars_t([' ', '\t', '\r'], false), true)) && !e) {
+		if(!(parc_parse_handle(parc_parse_pt_comment(), true)) && !e) {
+			ret false;
+		}
+	}
+	ret!e
+};
+fun parc_parse_pg_4() {
+	if(!(parc_parse_match_to('*/', 0, true) && parc_parse_handle(parc_parse_matchany_t(), true)) && !e) {
+		ret false;
+	}
+	ret!e
+};
+fun parc_parse_pg_5() {
+	if(!(parc_parse_handle(parc_parse_matchchars_t([' ', '\t', '\r', '\n'], false), false)) && !e) {
+		if(!(parc_parse_handle(parc_parse_pt_comment(), false)) && !e) {
+			ret false;
+		}
+	}
+	ret!e
+};

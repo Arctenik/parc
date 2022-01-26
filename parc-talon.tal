@@ -1,0 +1,389 @@
+
+
+fun parc_hexval(c) {
+	this n = ord(c)
+	if (n < 65) {
+		n -= 48
+	} else if (n < 97) {
+		n -= 55
+	} else {
+		n -= 87
+	}
+	if (0 <= n && n < 16) {
+		ret n
+	} else {
+		ret ""
+	}
+}
+
+fun parc_getchar(string, i) {
+	if (string[i] == "\\") {
+		i += 1
+		if (string[i] == "u") {
+			this j = i + 1
+			this n = 0
+			this h
+			while (j < len(string) && string[j] != ";") {
+				h = parc_hexval(string[j])
+				if (h == "") {
+					break
+				} else {
+					n = n * 16 + h
+				}
+				j += 1
+			}
+			if (j < len(string) && string[j] == ";") {
+				ret [chr(n), j + 1]
+			}
+		}
+		if (string[i] == "t") {
+			ret ["\t", i + 1]
+		} else if (string[i] == "r") {
+			ret ["\r", i + 1]
+		} else if (string[i] == "n") {
+			ret ["\n", i + 1]
+		} else {
+			ret [string[i], i + 1]
+		}
+	} else {
+		ret [string[i], i + 1]
+	}
+}
+
+fun parc_parse_transform(type, value, index) {
+	if (type == "parser" || type == "ruleset") {
+		ret value
+	} else if (type == "rule") {
+		this star = false
+		this arrow = false
+		this prop
+		for (prop in value[1][1]) {
+			if (prop[0] == "arrow") {
+				if (len(prop[1]) > 0) {
+					arrow = prop[1][0][1]
+				} else {
+					arrow = true
+				}
+			} else {
+				star = true
+			}
+		}
+		ret [value[0][1], value[2], star, arrow]
+	} else if (type == "branch") {
+		this offsets = false
+		this main = false
+		this ext = false
+		this arrow = false
+		this item
+		for (item in value) {
+			if (item[0] == "offsets") {
+				offsets = item[1]
+			} else if (item[0] == "cond") {
+				ext = item[1]
+			} else if (item[0] == "arrow") {
+				if (len(item[1]) > 0) {
+					arrow = item[1][0][1]
+				} else {
+					arrow = true
+				}
+			} else {
+				main = item
+			}
+		}
+		ret [offsets, main, ext, arrow]
+	} else if (type == "offset") {
+		this offset = 0
+		this i = 0
+		if (value[0][0] == "number") {
+			offset = int(value[0][1])
+			i += 1
+		}
+		ret ["offset", offset, value[i][1] == "!", value[i + 1]]
+	} else if (type == "expression") {
+		this colon
+		this i = 0
+		if (value[0][0] == "colon") {
+			colon = value[0][1]
+			i += 1
+		}
+		this result = value[i]
+		if (colon) {
+			result = ["save", result, colon == ":"]
+		}
+		if (i + 1 < len(value)) {
+			result = [value[i + 1][0], result, value[i + 1][2]]
+		}
+		ret result
+	} else if (type == "string") {
+		value = value[1:-1]
+		this result = ""
+		this charinfo
+		this i = 0
+		while (i < len(value)) {
+			charinfo = parc_getchar(value, i)
+			result += charinfo[0]
+			i = charinfo[1]
+		}
+		ret ["string", result]
+	} else if (type == "chars") {
+		value = value[1:-1]
+		this inverse = false
+		if (len(value) > 0 && value[0] == "^") {
+			inverse = true
+			value = value[1:]
+		}
+		this result = []
+		this charinfo
+		this i = 0
+		while (i < len(value)) {
+			charinfo = parc_getchar(value, i)
+			append(result, charinfo[0])
+			i = charinfo[1]
+			if (i + 1 < len(value) && value[i] == "-") {
+				charinfo = parc_getchar(value, i + 1)
+				result[-1] = result[-1] + charinfo[0]
+				i = charinfo[1]
+			}
+		}
+		ret ["chars", result, inverse]
+	} else {
+		ret [type, value, index]
+	}
+}
+
+fun parc_ruleref(rules, name) {
+	this rule
+	for (rule in rules) {
+		if (rule[0] == name) {
+			ret true
+		}
+	}
+	ret false
+}
+
+fun parc_compile(source, pn) {
+	this parsed = parc_parse(source, true)
+	
+	if (parsed[1]) {
+		ret parsed
+	}
+	
+	source = parsed[0]
+	
+	this exprrules = source[0]
+	this tokenrules = source[1]
+	
+	this untypedparser = exprrules[0][2] || exprrules[0][3] == true
+	this nextgroupid = 0
+	this groupscode = ''
+	this result = ''
+	this compileerror = false
+	
+	result += 'fun ' + pn + '(text, usetransforms) {this e = false; this i = 0; this tokens = ' + pn + '_pt_' + tokenrules[0][0] + '(); if (e) {ret [tokens, e]} else if (i < len(text) || tokens == false) {ret [tokens, ' + pn + '_error_t()]}; i = 0; this result = ' + pn + '_pe_' + exprrules[0][0] + '(); if (e) {ret [result, e]} else if (i < len(tokens) || result == false) {ret [result, ' + pn + '_error_t()]}; if (usetransforms) {'
+	if (untypedparser) {
+		result += 'this srcexprs = result; result = []; this resultitem; for (resultitem in srcexprs) {append(result, ' + pn + '_evaltransforms(resultitem))}'
+	} else {
+		result += 'result = ' + pn + '_evaltransforms(result[0])} else {result = result[0]'
+	}
+	result += '}; ret [result, e]};'
+	
+	result += ' fun ' + pn + '_init(type) {ret [type, [], i]};'
+	result += ' fun ' + pn + '_handle(data, save) {if (e || data == false) {ret false} else {if (save) {this expr; for (expr in data) {append(result[1], expr)}}; ret true}};'
+	result += ' fun ' + pn + '_encstring(string) {string = str([string]); ret string[1:-1]};'
+	result += ' fun ' + pn + '_formatloc(text, i) {this loc = ' + pn + '_getloc(text, i); ret "line " + str(loc[1] + 1) + " character " + str(loc[2] + 1)};'
+	result += ' fun ' + pn + '_getloc(text, i) {this j = 0; this k = 0; this l = 0; while (j < i && j < len(text)) {if (text[j] == "\\n") {k += 1; l = j + 1}; j += 1}; ret [i, k, i - l]};'
+	result += ' fun ' + pn + '_evaltransforms(expr) {this val; if (expr[1][:0] == "") {val = expr[1]} else {val = []; this item; for (item in expr[1]) {append(val, ' + pn + '_evaltransforms(item))}}; ret ' + pn + '_transform(expr[0], val, expr[2])};'
+	
+	result += ' fun ' + pn + '_e_result() {if (e) {ret false} else if (result[0] == false) {ret result[1]} else {if (result[2] < len(tokens)) {result[2] = tokens[result[2]][2]} else {result[2] = len(text)}; ret [result]}};'
+	result += ' fun ' + pn + '_match_eo(string, offset, inverse) {this j = i + (offset || 0); if (j < len(tokens) && tokens[j][0] == string) {if (offset == "") {i += 1}; if (inverse) {ret false} else {ret [tokens[j]]}} else {if (inverse) {ret true} else {ret false}}};'
+	result += ' fun ' + pn + '_matchany_eo(offset, inverse) {this j = i + (offset || 0); if (j < len(tokens)) {if (offset == "") {i += 1}; if (inverse) {ret false} else {ret [tokens[j]]}} else {if (inverse) {ret true} else {ret false}}};'
+	result += ' fun ' + pn + '_match_e(string) {ret ' + pn + '_match_eo(string, "", false)};'
+	result += ' fun ' + pn + '_matchany_e() {ret ' + pn + '_matchany_eo("", false)};'
+	result += ' fun ' + pn + '_error_e() {if (i < len(tokens)) {ret "Unexpected" + ((tokens[i][0] == tokens[i][1] && "") || " " + tokens[i][0]) + " token " + ' + pn + '_encstring(tokens[i][1]) + " at " + ' + pn + '_formatloc(text, tokens[i][2])} else {ret "Unexpected end of input"}};'
+	
+	result += ' fun ' + pn + '_t_result() {if (e) {ret false} else if (result[0] == false) {ret result[1]} else {result[1] = ' + pn + '_jointokens(result[1]); ret [result]}};'
+	result += ' fun ' + pn + '_jointokens(tokens) {this result = ""; this token; for (token in tokens) {result += token[1]}; ret result};'
+	result += ' fun ' + pn + '_match_to(string, offset, inverse) {this j = i + (offset || 0); if (j + len(string) <= len(text) && text[j:j+len(string)] == string) {if (offset == "") {i += len(string)}; if (inverse) {ret false} else {ret [[string, string, j]]}} else {if (inverse) {ret true} else {ret false}}};'
+	result += ' fun ' + pn + '_matchany_to(offset, inverse) {this j = i + (offset || 0); if (j < len(text)) {if (offset == "") {i += 1}; if (inverse) {ret false} else {ret [[text[j], text[j], j]]}} else {if (inverse) {ret true} else {ret false}}};'
+	result += ' fun ' + pn + '_matchchars_to(chars, charsinverse, offset, inverse) {this j = i + (offset || 0); this match = false; if (j < len(text)) {this n = ord(text[j]); this range; for (range in chars) {if (len(range) == 1) {if (ord(range) == n) {match = true; break}} else {if (ord(range[0]) <= n && n <= ord(range[1])) {match = true; break}}}; if (charsinverse) {match = !match}}; if (match) {if (offset == "") {i += 1}; if (inverse) {ret false} else {ret [[text[j], text[j], j]]}} else {if (inverse) {ret true} else {ret false}}};'
+	result += ' fun ' + pn + '_match_t(string) {ret ' + pn + '_match_to(string, "", false)};'
+	result += ' fun ' + pn + '_matchany_t() {ret ' + pn + '_matchany_to("", false)};'
+	result += ' fun ' + pn + '_matchchars_t(chars, inverse) {ret ' + pn + '_matchchars_to(chars, inverse, "", false)};'
+	result += ' fun ' + pn + '_error_t() {if (i < len(text)) {ret "Invalid syntax at " + ' + pn + '_formatloc(text, i)} else {ret "Unexpected end of input"}};'
+	
+	this rule
+	for (rule in exprrules) {
+		result += parc_compilerule(rule, "exprs")
+	}
+	for (rule in tokenrules) {
+		result += parc_compilerule(rule, "tokens")
+	}
+	
+	result += groupscode
+	
+	ret [result, compileerror]
+}
+
+fun parc_compilerule(rule, phase) {
+	this result = ' '
+	result += 'fun ' + pn + '_p' + phase[0] + '_' + rule[0] + '() {this result = ' + pn + '_init('
+	if (rule[2] || rule[3] == true) {
+		result += 'false'
+	} else {
+		result += parc_parse_encstring(rule[3] || rule[0])
+	}
+	result += '); ' + parc_compilegroup(rule[1]) + ' ret ' + pn + '_' + phase[0] + '_result()};'
+	ret result
+}
+
+fun parc_compilegroup(group) {
+	this result = 'ret false;'
+	this branches = group[1][:]
+	reverse(branches)
+	this branch
+	this arrowcode
+	for (branch in branches) {
+		arrowcode = ''
+		if (branch[3]) {
+			arrowcode = ' result[0] = '
+			if (branch[3] == true) {
+				arrowcode += 'false'
+			} else {
+				arrowcode += parc_parse_encstring(branch[3])
+			}
+			arrowcode += ';'
+		}
+		if (branch[0] == false && branch[1] == false) {
+			result = parc_compileexprs(branch[2] || []) + arrowcode
+		} else {
+			result = parc_compilecondition(branch, arrowcode) + ' {' + result + '}'
+		}
+	}
+	ret result
+}
+
+fun parc_compilecondition(branch, bodyend) {
+	this offsets = branch[0]
+	this main = branch[1]
+	this ext = branch[2]
+	
+	this cond = ''
+	this start = ''
+	
+	if (main != false) {
+		if (main[0] == "plus") {
+			cond = parc_compilebase(main[1])
+			start = 'while (' + cond + ') {};'
+		} else {
+			cond = parc_compilebase(main)
+		}
+	}
+	
+	if (offsets != false) {
+		offsets = offsets[:]
+		reverse(offsets)
+		this offset
+		for (offset in offsets) {
+			if (cond) {
+				cond = ' && ' + cond
+			}
+			cond = parc_compilebase(offset) + cond
+		}
+	}
+	
+	if (start || ext || bodyend) {
+		this result = 'if (' + cond + ') {' + start
+		if (ext) {
+			result += parc_compileexprs(ext)
+		}
+		ret result + bodyend + '} else if (!e)'
+	} else {
+		ret 'if (!(' + cond + ') && !e)'
+	}
+}
+
+fun parc_compileexprs(exprs) {
+	this result = ''
+	this expr
+	for (expr in exprs) {
+		if (expr[0] == "plus") {
+			this cond = parc_compilebase(expr[1])
+			result += ' if (!e && (' + cond + ')) {while (!e && (' + cond + ')) {}} else {e = ' + pn + '_error_' + phase[0] + '()};'
+		} else if (expr[0] == "star") {
+			result += ' while (!e && (' + parc_compilebase(expr[1]) + ')) {};'
+		} else if (expr[0] == "question") {
+			result += ' if (!e) {' + parc_compilebase(expr[1]) + '};'
+		} else {
+			result += ' if (!e && !(' + parc_compilebase(expr) + ')) {e = ' + pn + '_error_' + phase[0] + '()};'
+		}
+	}
+	ret result
+}
+
+fun parc_compilebase(expr) {
+	this resultfunc
+	this phasesuffix = '_' + phase[0]
+	this resultargs = ''
+	this save = phase == "tokens" && !(rule[2])
+	this forcesave = ""
+	this offset = ""
+	this offsetinverse
+	
+	if (expr[0] == "save") {
+		forcesave = expr[2]
+		expr = expr[1]
+	} else if (expr[0] == "offset") {
+		offset = expr[1]
+		offsetinverse = expr[2]
+		expr = expr[3]
+	}
+	
+	if (expr[0] == "group") {
+		this id = nextgroupid
+		nextgroupid += 1
+		this funccode = ' fun ' + pn + '_pg_' + str(id) + '() {' + parc_compilegroup(expr) + ' ret !e};'
+		groupscode += funccode
+		resultfunc = 'pg_' + str(id)
+		phasesuffix = ''
+		save = false
+	} else if (expr[0] == "name" && ((phase == "tokens" && parc_ruleref(tokenrules, expr[1])) || (phase == "exprs" && parc_ruleref(exprrules, expr[1])))) {
+		resultfunc = 'p' + phase[0] + '_' + expr[1]
+		phasesuffix = ''
+		save = true
+	} else if (expr[0] == "string" || expr[0] == "name") {
+		resultfunc = 'match'
+		resultargs = parc_parse_encstring(expr[1])
+		if (expr[0] == "name") {
+			save = true
+		}
+	} else if (expr[0] == "chars") {
+		if (phase == "exprs") {
+			if (!compileerror) {
+				compileerror = "Chars expression in expression parser"
+			}
+			ret ''
+		} else {
+			resultfunc = 'matchchars'
+			resultargs = str(expr[1]) + ", " + ((expr[2] && "true") || "false")
+		}
+	} else if (expr[0] == "dot") {
+		resultfunc = 'matchany'
+		save = true
+	} else {
+		if (!compileerror) {
+			compileerror = "Invalid expression at " + parc_parse_formatloc(source, expr[2]) // hopefully this will only happen for expressions that actually have the location in 2?
+		}
+		ret ''
+	}
+	
+	if (forcesave != "") {
+		save = forcesave
+	}
+	
+	if (offset == "") {
+		ret pn + '_handle(' + pn + '_' + resultfunc + phasesuffix + '(' + resultargs + '), ' + ((save && 'true') || 'false') + ')'
+	} else {
+		ret pn + '_' + resultfunc + phasesuffix + 'o' + '(' + resultargs + (resultargs && ', ') + str(offset) + ", " + ((offsetinverse && 'true') || 'false') + ')'
+	}
+}
+

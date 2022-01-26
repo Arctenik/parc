@@ -1,0 +1,21 @@
+
+
+fun parc_parse_evaltransforms(expr) {
+	this val
+	if (expr[1][:0] == "") {
+		val = expr[1]
+	} else {
+		val = []
+		this item
+		for (item in expr[1]) {
+			append(val, parc_parse_evaltransforms(item))
+		}
+	}
+	ret parc_parse_transform(expr[0], val, expr[2])
+}
+
+fun parc_parse_encstring(string) {
+	string = str([string])
+	ret string[1:-1]
+}
+
