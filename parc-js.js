@@ -411,7 +411,7 @@
 						result = `matchAny(${offsetArgFirst})`;
 						save = true;
 					} else {
-						throw "wtf";
+						throw expr;
 					}
 					
 					if (forceSave !== undefined) save = forceSave;
