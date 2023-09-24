@@ -64,7 +64,7 @@ Matching a rule proceeds as follows:
 
 ### Individual expressions
 
-A literal expression (string, character set, or wildcard) can be prefixed with a number and either an ampersand or an exclamation point, to produce an offset match or an inverse offset match respectively (neither of which will produce output or change the parser's position in the input); e.g. in a token rule, `-1&"a"` matches if the previous character is "a", and `2!"z"` matches if there is NOT a "z" two characters ahead
+A literal expression (string, character set, or wildcard) can be prefixed with a number (which may be omitted for 0) and either an ampersand or an exclamation point, to produce an offset match or an inverse offset match respectively (neither of which will produce output or change the parser's position in the input); e.g. in a token rule, `-1&"a"` matches if the previous character is "a", and `2!"z"` matches if there is NOT a "z" two characters ahead
 
 A non-group expression can be prefixed with a colon to include it in output, or a semicolon to remove it from output
 
@@ -72,13 +72,29 @@ An expression can be suffixed with a question mark for an optional match, an ast
 
 A group can be used as an expression and behaves equivalently to an adaptive-return rule, with the exception that any return type expressions in the group will affect the return type of the containing rule
 
-A name (i.e. a sequence of characters in the set `[a-zA-Z_]`) produces output by default; it matches against a rule if a rule with that name exists in the current ruleset, and behaves like a string otherwise
+A name (i.e. a sequence of characters in the set `[a-zA-Z_]`) produces output by default; it matches against a rule if a rule with that name exists in the current ruleset, and matches like a string otherwise
 
 A string in an expression rule matches a token with that type, and in a token rule matches that sequence of characters; strings are enclosed in double-quotes, and may contain certain escape sequences: `\t` for tab, `\r` for carriage return, `\n` for line feed, `\u<hex digits>;` for the character with hexadecimal unicode value `<hex digits>`, and `\<any other character>` for `<any other character>`
 
 A character set (only valid in a token rule) matches a single character from a given set, written as square brackets enclosing a list of characters and character ranges; a character range consists of two characters separated by a dash, and matches any characters in the range between those two (inclusive); a carat may be placed after the openining bracket to invert the set; and escape sequences may be used in the same way as with strings
 
 A wildcard, written as a period, produces output by default and matches any single token or character (for expression and token rules respectively)
+
+### Summary of differences between token and expression parsers
+
+- A token rule matches against a sequence of characters, while an expression rule matches against a sequence of tokens
+- A string in a token rule matches multiple characters, while a string in an expression rule matches a single token's type (these also apply to names that don't refer to rules)
+- Character sets can only be used in token rules
+- A token rule only returns tokens, while an expression rule may return matched tokens without an enclosing expression; a matched string in a token rule returns a token with a type equal to the matched string
+- Tokens returned by a token rule may end up concatenated by a specific-return rule, or may end up ultimately getting returned as separate tokens by an adaptive-return initial rule (on the other hand, objects returned by expression rules will (in theory - see below) always be collected as separate objects within an expression)
+- The initial rule of a token parser should be adaptive-return, while the intial rule of an expression parser should be specific-return (though these may not enforced, or may be implicitly encouraged, e.g. parc-js returning only the first expression returned by the initial rule)
+- Token rules are full-return by default, while expression rules are select-return
+
+### Summary of when matches are included in output
+
+- An offset match never produces output
+- A name or group always produces output unless excluded with a semicolon (or at least, has the potential to produce output; groups as well as names that refer to rules will return according to the contents of the group/rule)
+- Anything else returns according to the colon/semicolon prefix if present, or the return mode of the containing rule otherwise
 
 ## parc-js
 
