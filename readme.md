@@ -119,7 +119,7 @@ A wildcard, written as a period, produces output by default and matches any sing
 - One or more **branch**:
   - At least one of the following must be present
   - Optional **offsets**:
-    - One or more **offset**
+    - One or more *offset*
   - Optional *expression*
   - Optional **cond**:
     - Any number of *expression*
@@ -132,21 +132,21 @@ A wildcard, written as a period, produces output by default and matches any sing
 ### expression
 
 - Either an offset expression:
-  - **offset**
+  - *offset*
 - Or another expression:
-  - Optional **colon** token
-  - **dot** token or **string** token or **chars** token or **name** token or **group**
-  - Optional **star** token or **plus** token or **question** token
+  - Optional *colon* token
+  - *dot* token or *string* token or *chars* token or *name* token or *group*
+  - Optional *star* token or *plus* token or *question* token
 
 ### offset
 
-- Optional **number** token
-- **offsettype** token
-- **dot** token or **string** token or **chars** token
+- Optional *number* token
+- *offsettype* token
+- *dot* token or *string* token or *chars* token
 
 ### Additional notes
 
-- Values of **string** and **chars** tokens are unmodified source code (i.e. they have enclosing quotes/brackets and retain escape sequences)
+- Values of *string* and *chars* tokens are unmodified source code (i.e. they have enclosing quotes/brackets and retain escape sequences)
 
 ## parc-js
 
