@@ -124,6 +124,7 @@ A wildcard, written as a period, produces output by default and matches any sing
   - Optional **cond**:
     - Any number of *expression*
   - Optional *arrow*
+- Only the last branch may start with a cond or arrow
 
 ### arrow
 
@@ -134,7 +135,7 @@ A wildcard, written as a period, produces output by default and matches any sing
 - Either an offset expression:
   - *offset*
 - Or another expression:
-  - Optional *colon* token
+  - Optional *colon* token (cannot appear before a group)
   - *dot* token or *string* token or *chars* token or *name* token or *group*
   - Optional *star* token or *plus* token or *question* token
 
