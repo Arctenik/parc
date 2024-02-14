@@ -17,8 +17,8 @@ Each ruleset consists of a sequence of rules; the first rule listed is the initi
 A rule consists of a name, optional rule properties, and a group expression; for example:
 ```
 groupcontent => {
-	uncondbranch > "lb"?
-	branch > groupcontenttail?
+    uncondbranch > "lb"?
+    branch > groupcontenttail?
 }
 ```
 (`=>` is a rule property that affects return type)
@@ -95,6 +95,58 @@ A wildcard, written as a period, produces output by default and matches any sing
 - An offset match never produces output
 - A name or group always produces output unless excluded with a semicolon (or at least, has the potential to produce output; groups as well as names that refer to rules will return according to the contents of the group/rule)
 - Anything else returns according to the colon/semicolon prefix if present, or the return mode of the containing rule otherwise
+
+## AST structure of parsed parsers
+
+(Reference for writing new Parc implementations)
+
+### parser
+
+- *ruleset* for expression rules
+- *ruleset* for token rules
+
+### ruleset
+
+- One or more **rule**:
+  - *name* token
+  - **ruleprops**:
+    - Optional *star* token
+    - Optional *arrow*
+  - *group*
+
+### group
+
+- One or more **branch**:
+  - At least one of the following must be present
+  - Optional **offsets**:
+    - One or more **offset**
+  - Optional *expression*
+  - Optional **cond**:
+    - Any number of *expression*
+  - Optional *arrow*
+
+### arrow
+
+- Optional *name* token
+
+### expression
+
+- Either an offset expression:
+  - **offset**
+- Or another expression:
+  - Optional **colon** token
+  - **dot** token or **string** token or **chars** token or **name** token or **group**
+  - Optional **star** token or **plus** token or **question** token
+
+### offset
+
+- Optional **number** token
+- **offsettype** token
+- **dot** token or **string** token or **chars** token
+
+### Additional notes
+
+- Values of **string** and **chars** tokens are unmodified source code (i.e. they have enclosing quotes/brackets and retain escape sequences)
 
 ## parc-js
 
